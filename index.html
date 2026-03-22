@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>EEG 情绪神经交互终端 - ECNU 脑形版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        :root { --bg: #0b0f1a; --card: #161e35; --blue: #3b82f6; --text: #f1f5f9; --red: #ef4444; }
+        
+        /* 项目大标题样式 */
+        .project-header { 
+            text-align: center; 
+            margin-bottom: 25px; 
+        }
+        .project-header h1 {
+            font-size: 32px; 
+            font-weight: 800; 
+            margin: 0;
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent;
+        }
+        .project-header p { 
+            color: #94a3b8; 
+            font-size: 14px; 
+            margin-top: 5px; 
+            letter-spacing: 4px; 
+            text-transform: uppercase;
+        }
+
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 20px; overflow-x: hidden; }
+        .grid { display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 20px; max-width: 1550px; margin: 0 auto; }
+        .nav-bar { grid-column: 1 / -1; background: var(--card); padding: 15px; border-radius: 12px; display: flex; justify-content: center; gap: 20px; border: 1px solid #2d3748; }
+        .panel { background: var(--card); border-radius: 16px; padding: 20px; border: 1px solid #2d3748; min-height: 520px; }
+        .chart { width: 100%; height: 460px; }
+        .reason-panel { grid-column: 1 / -1; background: #1e293b; padding: 25px; border-radius: 12px; border-left: 5px solid var(--blue); }
+        
+        /* 百科百科侧边栏 */
+        #encyclopedia { position: fixed; right: -450px; top: 0; width: 400px; height: 100%; background: #161c30; box-shadow: -10px 0 30px rgba(0,0,0,0.5); transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000; padding: 30px; overflow-y: auto; border-left: 3px solid var(--blue); }
+        #encyclopedia.active { right: 0; }
+        .g-sec { margin-bottom: 25px; }
+        .g-sec h4 { color: var(--blue); border-bottom: 1px solid #2d3748; margin-bottom: 10px; padding-bottom: 5px; }
+        .color-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .c-box { width: 20px; height: 20px; border-radius: 4px; }
+
+        select, button { padding: 12px 25px; border-radius: 8px; border: none; font-size: 14px; cursor: pointer; transition: 0.3s; }
+        button { background: var(--blue); color: white; font-weight: bold; }
+        button:hover { background: #2563eb; transform: translateY(-2px); }
+        .res-val { font-size: 30px; font-weight: bold; color: var(--blue); display: block; margin: 10px 0 20px; }
+    </style>
+</head>
+<body>
+<div class="project-header">
+    <h1>EEG 情绪智能分析实时系统</h1>
+    <p>EAST CHINA　NORMAL UNIVERSITY </p>
+</div>
+<div id="encyclopedia">
+    <button onclick="toggleG()" style="background:var(--red); width:100%; margin-bottom:20px;">关闭百科指南</button>
+    <h2 style="text-align:center">🧠 脑电数据百科全书</h2>
+    
+    <div class="g-sec">
+        <h4>🎨 颜色与标尺解释</h4>
+        <div class="color-row"><div class="c-box" style="background:#ef4444"></div><b>红色 (高能量/高唤醒):</b></div>
+        <p style="font-size:13px; color:#94a3b8">代表神经元放电剧烈。在额叶亮起通常代表高压力的认知调度或强烈的积极兴奋。</p>
+        <div class="color-row"><div class="c-box" style="background:#3b82f6"></div><b>蓝色 (低能量/静息):</b></div>
+        <p style="font-size:13px; color:#94a3b8">代表脑区处于平静或受抑制状态。</p>
+    </div>
+
+    <div class="g-sec">
+        <h4>📡 核心频段物理意义</h4>
+        <p><b>Beta (13-30Hz):</b> 专注、思考。过高指示焦虑、压力状态。</p>
+        <p><b>Alpha (8-13Hz):</b> 闭目、放松。心理舒适度的核心指标。</p>
+        <p><b>Theta/Delta:</b> 冥想、潜意识与深度睡眠。</p>
+    </div>
+
+    <div class="g-sec">
+        <h4>📍 关键电极分布指南</h4>
+        <p><b>Fp1/Fp2 (前额叶):</b> 情绪调控中心。左侧(Fp1)偏积极，右侧(Fp2)偏消极。</p>
+        <p><b>O1/O2 (枕叶):</b> 后脑勺。视觉处理中心。</p>
+        <p><b>T3/T4 (颞叶):</b> 记忆与听觉感知的关键区域。</p>
+    </div>
+</div>
+
+<div class="grid">
+    <div class="nav-bar">
+        <select id="sampleSelect"><option>正在加载神经元...</option></select>
+        <button onclick="doAnalyze()">同步信号并分析</button>
+        <button style="background:#6366f1" onclick="toggleG()">📖 开启全能指南百科</button>
+    </div>
+
+    <div class="panel">
+        <h3>频段能量实时解析 (Radar)</h3>
+        <div id="radarChart" class="chart"></div>
+    </div>
+
+    <div class="panel">
+        <h3>大脑皮层热力图 (含标尺与交互)</h3>
+        <div id="brainMap" class="chart"></div>
+    </div>
+
+    <div class="panel">
+        <h3>AI 诊断报告</h3>
+        <p style="font-size:12px; color:#94a3b8">预测情绪状态:</p>
+        <span id="p_lab" class="res-val">-</span>
+        <p style="font-size:12px; color:#94a3b8">预测置信度:</p>
+        <span id="p_conf" class="res-val" style="color:#10b981">-</span>
+        <hr style="opacity:0.1; margin:30px 0;">
+        <p style="font-size:12px; color:#94a3b8">原始记录真值:</p>
+        <span id="t_lab" class="res-val" style="color:#fbbf24">-</span>
+    </div>
+
+    <div class="reason-panel">
+        <h3 style="color:white; border:none; margin-bottom:10px;">🧪 神经科学深度解读 (解释板块)</h3>
+        <p id="reasonText" style="color:#cbd5e1; font-size:16px; margin:0;">请注入数据。系统将生成基于脑电不对称性及波段比率的深度分析报告...</p>
+    </div>
+</div>
+
+<script>
+    let bC = echarts.init(document.getElementById('brainMap'));
+    let rC = echarts.init(document.getElementById('radarChart'));
+    const API = "http://127.0.0.1:5000/api";
+
+    const eNodes = [
+        {n:"Fp1", a:"左前额", f:"情绪调控", p:[42,85]}, {n:"Fp2", a:"右前额", f:"冲动控制", p:[58,85]},
+        {n:"F3", a:"左额叶", f:"逻辑推理", p:[35,72]}, {n:"F4", a:"右额叶", f:"认知控制", p:[65,72]},
+        {n:"C3", a:"左中央", f:"运动感知", p:[30,50]}, {n:"C4", a:"右中央", f:"运动感知", p:[70,50]},
+        {n:"P3", a:"左顶叶", f:"空间定位", p:[35,28]}, {n:"P4", a:"右顶叶", f:"感知整合", p:[65,28]},
+        {n:"O1", a:"左枕叶", f:"视觉处理", p:[43,12]}, {n:"O2", a:"右枕叶", f:"视觉处理", p:[57,12]},
+        {n:"F7", a:"前左颞", f:"言语产生", p:[18,72]}, {n:"F8", a:"前右颞", f:"情绪识别", p:[82,72]},
+        {n:"T3", a:"中左颞", f:"听觉记忆", p:[12,50]}, {n:"T4", a:"中右颞", f:"节奏感知", p:[88,50]},
+        {n:"T5", a:"后左颞", f:"视觉记忆", p:[18,28]}, {n:"T6", a:"后右颞", f:"面孔识别", p:[82,28]},
+        {n:"Fz", a:"额叶中线", f:"工作记忆", p:[50,72]}, {n:"Cz", a:"中央中线", f:"躯体整合", p:[50,50]},
+        {n:"Pz", a:"顶叶中线", f:"注意力", p:[50,28]}, {n:"Oz", a:"枕叶中线", f:"视觉联络", p:[50,10]}
+    ];
+
+    window.onload = () => {
+        fetch(`${API}/get_samples`).then(r => r.json()).then(d => {
+            document.getElementById('sampleSelect').innerHTML = d.map(x => `<option value="${x.sample_id}">${x.name}</option>`).join('');
+        });
+        bC.setOption({
+            graphic: [
+                { type:'circle', left:'center', top:'center', shape:{r:160}, style:{fill:'#0f172a', stroke:'#334155', lineWidth:3} },
+                { type:'polygon', left:'center', top:35, shape:{points:[[-12,0],[12,0],[0,-20]]}, style:{fill:'#334155'} }
+            ],
+            xAxis: {min:0, max:100, show:false}, yAxis: {min:0, max:100, show:false}
+        });
+    };
+
+    // 修复后的切换函数：统一使用 encyclopedia 和 active
+    function toggleG() { 
+        document.getElementById('encyclopedia').classList.toggle('active'); 
+    }
+
+    function doAnalyze() {
+        const id = document.getElementById('sampleSelect').value;
+        fetch(`${API}/predict`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({sample_id: parseInt(id)})
+        }).then(r => r.json()).then(data => {
+            document.getElementById('p_lab').innerText = data.predicted_label;
+            document.getElementById('p_conf').innerText = (data.confidence*100).toFixed(1) + "%";
+            document.getElementById('t_lab').innerText = data.true_label;
+            document.getElementById('reasonText').innerText = data.reasoning;
+
+            rC.setOption({
+                radar: {
+                    indicator: [
+                        { name: 'Delta\n'+data.bands_data[0]+'%', max: 100 },
+                        { name: 'Theta\n'+data.bands_data[1]+'%', max: 100 },
+                        { name: 'Alpha\n'+data.bands_data[2]+'%', max: 100 },
+                        { name: 'Beta\n'+data.bands_data[3]+'%', max: 100 },
+                        { name: 'Gamma\n'+data.bands_data[4]+'%', max: 100 }
+                    ],
+                    shape: 'circle', axisName: { color: '#94a3b8', fontSize: 10 }
+                },
+                series: [{
+                    type: 'radar',
+                    data: [{ value: data.bands_data, areaStyle:{color:'rgba(59,130,246,0.4)'}, label:{show:true, fontSize:9, color:'#fff'} }]
+                }]
+            }, true);
+
+            bC.setOption({
+                visualMap: {
+                    min: 0, max: 100, orient: 'vertical', right: 5, top: 'center',
+                    text: ['高', '低'], inRange: { color: ['#3b82f6', '#fbbf24', '#ef4444'] },
+                    textStyle: { color: '#94a3b8', fontSize: 10 }
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: (p) => {
+                        const e = eNodes[p.dataIndex];
+                        return `<div style="padding:5px"><b>电极: ${e.n}</b><br/>区域: ${e.a}<br/>功能: ${e.f}<br/>强度: ${p.data[2]}%</div>`;
+                    }
+                },
+                series: [{
+                    type: 'effectScatter', coordinateSystem: 'cartesian2d',
+                    data: eNodes.map((e,i) => [e.p[0], e.p[1], data.heatmap_data[i]]),
+                    symbolSize: v => v[2]/2.5 + 10,
+                    itemStyle: { color: p => p.data[2] > 70 ? '#ef4444' : (p.data[2] > 40 ? '#fbbf24' : '#3b82f6') }
+                }]
+            });
+        });
+    }
+</script>
+</body>
+</html>
